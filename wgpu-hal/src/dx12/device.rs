@@ -12,6 +12,9 @@ use winapi::{
     Interface,
 };
 
+use wgt::{MemoryUsage, MemInfo};
+use crate::dx12::Adapter;
+
 // this has to match Naga's HLSL backend, and also needs to be null-terminated
 const NAGA_LOCATION_SEMANTIC: &[u8] = b"LOC\0";
 //TODO: find the exact value
@@ -20,6 +23,7 @@ const D3D12_HEAP_FLAG_CREATE_NOT_ZEROED: u32 = d3d12::D3D12_HEAP_FLAG_NONE;
 impl super::Device {
     pub(super) fn new(
         raw: native::Device,
+        adapter: Adapter,
         present_queue: native::CommandQueue,
         private_caps: super::PrivateCapabilities,
         library: &Arc<native::D3D12Lib>,
@@ -148,6 +152,7 @@ impl super::Device {
             },
             private_caps,
             shared: Arc::new(shared),
+            adapter: adapter.clone(),
             rtv_pool: Mutex::new(rtv_pool),
             dsv_pool: Mutex::new(descriptor::CpuPool::new(
                 raw,
@@ -1601,5 +1606,44 @@ impl crate::Device<super::Api> for super::Device {
         #[cfg(feature = "renderdoc")]
         self.render_doc
             .end_frame_capture(self.raw.as_mut_ptr() as *mut _, ptr::null_mut())
+    }
+
+    unsafe fn get_memory_usage(&self) -> MemoryUsage {
+        if let Some(adapter3) = self.adapter.raw.as_adapter3() {
+            let mut memory_budget_info = winapi::shared::dxgi1_4::DXGI_QUERY_VIDEO_MEMORY_INFO {
+                Budget: 0,
+                CurrentUsage: 0,
+                AvailableForReservation: 0,
+                CurrentReservation: 0,
+            };
+            let mut desc2 = winapi::shared::dxgi1_2::DXGI_ADAPTER_DESC2 {
+                Description: [0;128],
+                VendorId: 0,
+                DeviceId: 0,
+                SubSysId: 0,
+                Revision: 0,
+                DedicatedVideoMemory: 0,
+                DedicatedSystemMemory: 0,
+                SharedSystemMemory: 0,
+                AdapterLuid: winapi::shared::ntdef::LUID {
+                    HighPart: 0,
+                    LowPart: 0,
+                },
+                Flags: 0,
+                GraphicsPreemptionGranularity: 0,
+                ComputePreemptionGranularity: 0
+            };
+            adapter3.QueryVideoMemoryInfo(0, 0, &mut memory_budget_info);
+            adapter3.GetDesc2(&mut desc2);
+            println!("{}", memory_budget_info.Budget);
+            println!("{}", memory_budget_info.CurrentUsage);
+            println!("{}", memory_budget_info.AvailableForReservation);
+            println!("{}", memory_budget_info.CurrentReservation);
+            println!("{}", desc2.DedicatedVideoMemory);
+            println!("{}", desc2.DedicatedSystemMemory);
+            println!("{}", desc2.SharedSystemMemory);
+            println!("Got an adapter!");
+        }
+        MemoryUsage { wgpu_allocation: Some(MemInfo { used: 1, max: 2}), device_allocation: Some(MemInfo { used: 3, max: 4}) }
     }
 }

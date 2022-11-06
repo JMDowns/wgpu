@@ -5101,3 +5101,15 @@ impl Default for ShaderBoundChecks {
         Self::new()
     }
 }
+
+#[derive(Debug)]
+pub struct MemInfo {
+    pub used: u64,
+    pub max: u64
+}
+
+#[derive(Debug)]
+pub struct MemoryUsage {
+    pub wgpu_allocation: Option<MemInfo>,
+    pub device_allocation: Option<MemInfo>
+}

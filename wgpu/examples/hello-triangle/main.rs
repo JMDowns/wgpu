@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, process::exit};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -33,6 +33,10 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         )
         .await
         .expect("Failed to create device");
+
+    println!("{:?}", device.get_memory_usage());
+
+    exit(0);
 
     // Load the shaders from disk
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {

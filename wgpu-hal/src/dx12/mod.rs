@@ -155,13 +155,14 @@ struct PrivateCapabilities {
     heap_create_not_zeroed: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Workarounds {
     // On WARP, temporary CPU descriptors are still used by the runtime
     // after we call `CopyDescriptors`.
     avoid_cpu_descriptor_overwrites: bool,
 }
 
+#[derive(Clone)]
 pub struct Adapter {
     raw: native::DxgiAdapter,
     device: native::Device,
@@ -223,6 +224,7 @@ pub struct Device {
     idler: Idler,
     private_caps: PrivateCapabilities,
     shared: Arc<DeviceShared>,
+    adapter: Adapter,
     // CPU only pools
     rtv_pool: Mutex<descriptor::CpuPool>,
     dsv_pool: Mutex<descriptor::CpuPool>,

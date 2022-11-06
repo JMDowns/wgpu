@@ -340,7 +340,7 @@ impl crate::Adapter<super::Api> for super::Adapter {
                 .into_device_result("Queue creation")?
         };
 
-        let device = super::Device::new(self.device, queue, self.private_caps, &self.library)?;
+        let device = super::Device::new(self.device, self.clone(), queue, self.private_caps, &self.library)?;
         Ok(crate::OpenDevice {
             device,
             queue: super::Queue {

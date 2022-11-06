@@ -82,6 +82,7 @@ pub mod api {
 
 #[cfg(feature = "vulkan")]
 pub use vulkan::UpdateAfterBindTypes;
+use wgt::MemoryUsage;
 
 use std::{
     borrow::{Borrow, Cow},
@@ -328,6 +329,7 @@ pub trait Device<A: Api>: Send + Sync {
 
     unsafe fn start_capture(&self) -> bool;
     unsafe fn stop_capture(&self);
+    unsafe fn get_memory_usage(&self) -> MemoryUsage;
 }
 
 pub trait Queue<A: Api>: Send + Sync {

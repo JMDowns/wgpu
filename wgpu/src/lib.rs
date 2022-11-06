@@ -25,6 +25,7 @@ use std::{
 
 use parking_lot::Mutex;
 
+use wgt::MemoryUsage;
 pub use wgt::{
     AdapterInfo, AddressMode, AstcBlock, AstcChannel, Backend, Backends, BindGroupLayoutEntry,
     BindingType, BlendComponent, BlendFactor, BlendOperation, BlendState, BufferAddress,
@@ -543,6 +544,8 @@ trait Context: Debug + Send + Sized + Sync {
 
     fn device_start_capture(&self, device: &Self::DeviceId);
     fn device_stop_capture(&self, device: &Self::DeviceId);
+
+    fn device_get_memory_usage(&self, device: &Self::DeviceId) -> MemoryUsage;
 }
 
 /// Context for all other wgpu objects. Instance of wgpu.
@@ -2300,6 +2303,10 @@ impl Device {
     /// Stops frame capture.
     pub fn stop_capture(&self) {
         Context::device_stop_capture(&*self.context, &self.id)
+    }
+
+    pub fn get_memory_usage(&self) -> MemoryUsage {
+        Context::device_get_memory_usage(&*self.context, &self.id)
     }
 
     /// Apply a callback to this `Device`'s underlying backend device.

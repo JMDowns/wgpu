@@ -3,6 +3,7 @@ use std::{ffi::c_void, mem};
 use winapi::um::d3d11;
 
 use crate::auxil::dxgi::result::HResult;
+use wgt::{MemoryUsage, MemInfo};
 
 impl crate::Device<super::Api> for super::Device {
     unsafe fn exit(self, queue: super::Queue) {
@@ -198,6 +199,10 @@ impl crate::Device<super::Api> for super::Device {
     }
 
     unsafe fn stop_capture(&self) {
+        todo!()
+    }
+
+    unsafe fn get_memory_usage(&self) -> MemoryUsage {
         todo!()
     }
 }

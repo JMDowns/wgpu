@@ -19,7 +19,7 @@ use std::{
     slice,
     sync::Arc,
 };
-use wgt::{CompositeAlphaMode, PresentMode};
+use wgt::{CompositeAlphaMode, PresentMode, MemoryUsage};
 
 const LABEL: &str = "label";
 
@@ -2399,6 +2399,11 @@ impl crate::Context for Context {
     fn device_stop_capture(&self, device: &Self::DeviceId) {
         let global = &self.0;
         wgc::gfx_select!(device.id => global.device_stop_capture(device.id));
+    }
+
+    fn device_get_memory_usage(&self, device: &Self::DeviceId) -> MemoryUsage {
+        let global = &self.0;
+        wgc::gfx_select!(device.id => global.device_get_memory_usage(device.id))
     }
 }
 

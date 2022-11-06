@@ -2499,6 +2499,8 @@ impl crate::Context for Context {
 
     fn device_start_capture(&self, _device: &Self::DeviceId) {}
     fn device_stop_capture(&self, _device: &Self::DeviceId) {}
+
+    fn device_get_memory_usage(&self, device: &Self::DeviceId) -> wgt::MemoryUsage;
 }
 
 pub(crate) type SurfaceOutputDetail = ();

@@ -2,6 +2,8 @@
 
 use std::ops::Range;
 
+use wgt::MemoryUsage;
+
 #[derive(Clone)]
 pub struct Api;
 pub struct Context;
@@ -231,6 +233,10 @@ impl crate::Device<Api> for Context {
         false
     }
     unsafe fn stop_capture(&self) {}
+
+    unsafe fn get_memory_usage(&self) -> MemoryUsage {
+        MemoryUsage { wgpu_allocation: None, device_allocation: None }
+    }
 }
 
 impl crate::CommandEncoder<Api> for Encoder {

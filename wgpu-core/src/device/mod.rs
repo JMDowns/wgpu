@@ -22,7 +22,7 @@ use hal::{CommandEncoder as _, Device as _};
 use parking_lot::{Mutex, MutexGuard};
 use smallvec::SmallVec;
 use thiserror::Error;
-use wgt::{BufferAddress, TextureFormat, TextureViewDimension};
+use wgt::{BufferAddress, TextureFormat, TextureViewDimension, MemoryUsage};
 
 use std::{borrow::Cow, iter, mem, num::NonZeroU32, ops::Range, ptr};
 
@@ -5444,6 +5444,16 @@ impl<G: GlobalIdentityHandlerFactory> Global<G> {
         if let Ok(device) = device_guard.get(id) {
             unsafe { device.raw.stop_capture() };
         }
+    }
+
+    pub fn device_get_memory_usage<A: HalApi>(&self, id: id::DeviceId) -> MemoryUsage {
+        let hub = A::hub(self);
+        let mut token = Token::root();
+        let (device_guard, _) = hub.devices.read(&mut token);
+        if let Ok(device) = device_guard.get(id) {
+            unsafe { return device.raw.get_memory_usage(); }
+        }
+        MemoryUsage { wgpu_allocation: None, device_allocation: None }
     }
 
     pub fn device_drop<A: HalApi>(&self, device_id: id::DeviceId) {

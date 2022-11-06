@@ -3,6 +3,7 @@ use super::conv;
 use arrayvec::ArrayVec;
 use ash::{extensions::khr, vk};
 use parking_lot::Mutex;
+use wgt::{MemoryUsage, MemInfo};
 
 use std::{
     borrow::Cow,
@@ -1903,6 +1904,23 @@ impl crate::Device<super::Api> for super::Device {
             self.render_doc
                 .end_frame_capture(raw_vk_instance_dispatch_table, ptr::null_mut())
         }
+    }
+
+    unsafe fn get_memory_usage(&self) -> MemoryUsage {
+        let mut memory_budget = vk::PhysicalDeviceMemoryBudgetPropertiesEXT::default();
+        let mut memory_properties = vk::PhysicalDeviceMemoryProperties2::builder().push_next(&mut memory_budget).build();
+        self.shared.instance.raw.get_physical_device_memory_properties2(self.shared.physical_device, &mut memory_properties);
+        let device_local_heaps = memory_properties.memory_properties.memory_heaps
+            .iter()
+            .enumerate()
+            .filter(|(_, mh)| mh.flags.contains(vk::MemoryHeapFlags::DEVICE_LOCAL))
+            .map(|(i, _)| i)
+            .collect::<Vec<usize>>();
+        let device_allocation_max = device_local_heaps.iter().map(|i| memory_properties.memory_properties.memory_heaps[*i].size).sum();
+        let wgpu_allocation = device_local_heaps.iter().map(|i| memory_budget.heap_usage[*i]).sum();
+        let wgpu_max = device_local_heaps.iter().map(|i| memory_budget.heap_budget[*i]).sum();
+        let device_used = device_allocation_max - wgpu_max + wgpu_allocation;
+        MemoryUsage { wgpu_allocation: Some(MemInfo { used: wgpu_allocation, max: wgpu_max}), device_allocation: Some(MemInfo { used: device_used, max: device_allocation_max}) }
     }
 }
 

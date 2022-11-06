@@ -1,6 +1,7 @@
 use super::conv;
 use crate::auxil::map_naga_stage;
 use glow::HasContext;
+use wgt::MemoryUsage;
 use std::{
     convert::TryInto,
     iter, ptr,
@@ -1217,6 +1218,10 @@ impl crate::Device<super::Api> for super::Device {
         #[cfg(feature = "renderdoc")]
         self.render_doc
             .end_frame_capture(ptr::null_mut(), ptr::null_mut())
+    }
+
+    unsafe fn get_memory_usage(&self) -> MemoryUsage {
+        MemoryUsage { wgpu_allocation: None, device_allocation: None }
     }
 }
 
