@@ -1633,17 +1633,22 @@ impl crate::Device<super::Api> for super::Device {
                 GraphicsPreemptionGranularity: 0,
                 ComputePreemptionGranularity: 0
             };
-            adapter3.QueryVideoMemoryInfo(0, 0, &mut memory_budget_info);
+            let mut wgpu_allocation_max = 0;
+            let mut wgpu_allocation_used = 0;
+            let mut device_allocation_max = 0;
+
+            for i in 0..self.raw_device().GetNodeCount() {
+                adapter3.QueryVideoMemoryInfo(i, 0, &mut memory_budget_info);
+                wgpu_allocation_max += memory_budget_info.AvailableForReservation;
+                wgpu_allocation_used += memory_budget_info.CurrentUsage;
+            }
+
             adapter3.GetDesc2(&mut desc2);
-            println!("{}", memory_budget_info.Budget);
-            println!("{}", memory_budget_info.CurrentUsage);
-            println!("{}", memory_budget_info.AvailableForReservation);
-            println!("{}", memory_budget_info.CurrentReservation);
-            println!("{}", desc2.DedicatedVideoMemory);
-            println!("{}", desc2.DedicatedSystemMemory);
-            println!("{}", desc2.SharedSystemMemory);
-            println!("Got an adapter!");
+
+            let device_allocation_used = desc2.DedicatedSystemMemory - wgpu_allocation_max + wgpu_allocation_used;
+
+            return MemoryUsage { wgpu_allocation: Some(MemInfo { used:wgpu_allocation_used, max: wgpu_allocation_max}), device_allocation: Some(MemInfo { used: device_allocation_used, max: device_allocation_max}) };
         }
-        MemoryUsage { wgpu_allocation: Some(MemInfo { used: 1, max: 2}), device_allocation: Some(MemInfo { used: 3, max: 4}) }
+        MemoryUsage { wgpu_allocation: None, device_allocation: None }
     }
 }

@@ -7,7 +7,7 @@ use winit::{
 
 async fn run(event_loop: EventLoop<()>, window: Window) {
     let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::Backends::all());
+    let instance = wgpu::Instance::new(wgpu::Backends::DX12);
     let surface = unsafe { instance.create_surface(&window) };
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
@@ -35,8 +35,6 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         .expect("Failed to create device");
 
     println!("{:?}", device.get_memory_usage());
-
-    exit(0);
 
     // Load the shaders from disk
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
