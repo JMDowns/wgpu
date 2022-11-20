@@ -4,7 +4,7 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/gfx-rs/wgpu/master/logo.png")]
-#![warn(missing_docs)]
+#![warn(missing_docs, unsafe_op_in_unsafe_fn)]
 
 mod backend;
 pub mod util;
@@ -44,7 +44,7 @@ pub use wgt::{
     QUERY_RESOLVE_BUFFER_ALIGNMENT, QUERY_SET_MAX_QUERIES, QUERY_SIZE, VERTEX_STRIDE_ALIGNMENT,
 };
 
-use backend::{BufferMappedRange, Context as C, Id as BackendId, QueueWriteBuffer};
+use backend::{BufferMappedRange, Context as C, QueueWriteBuffer};
 
 /// Filter for error scopes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
@@ -166,7 +166,7 @@ trait RenderPassInner<Ctx: Context>: RenderInner<Ctx> {
 }
 
 trait GlobalId {
-    fn global_id(&self) -> BackendId;
+    fn global_id(&self) -> u64;
 }
 
 trait Context: Debug + Send + Sized + Sync {
@@ -1741,7 +1741,7 @@ impl Instance {
     #[cfg(any(not(target_arch = "wasm32"), feature = "emscripten"))]
     pub unsafe fn from_hal<A: wgc::hub::HalApi>(hal_instance: A::Instance) -> Self {
         Self {
-            context: Arc::new(C::from_hal_instance::<A>(hal_instance)),
+            context: Arc::new(unsafe { C::from_hal_instance::<A>(hal_instance) }),
         }
     }
 
@@ -1757,7 +1757,7 @@ impl Instance {
     /// [`Instance`]: hal::Api::Instance
     #[cfg(any(not(target_arch = "wasm32"), feature = "webgl"))]
     pub unsafe fn as_hal<A: wgc::hub::HalApi>(&self) -> Option<&A::Instance> {
-        self.context.instance_as_hal::<A>()
+        unsafe { self.context.instance_as_hal::<A>() }
     }
 
     /// Create an new instance of wgpu from a wgpu-core instance.
@@ -1772,7 +1772,7 @@ impl Instance {
     #[cfg(any(not(target_arch = "wasm32"), feature = "webgl"))]
     pub unsafe fn from_core(core_instance: wgc::instance::Instance) -> Self {
         Self {
-            context: Arc::new(C::from_core_instance(core_instance)),
+            context: Arc::new(unsafe { C::from_core_instance(core_instance) }),
         }
     }
 
@@ -1818,7 +1818,7 @@ impl Instance {
         hal_adapter: hal::ExposedAdapter<A>,
     ) -> Adapter {
         let context = Arc::clone(&self.context);
-        let id = context.create_adapter_from_hal(hal_adapter);
+        let id = unsafe { context.create_adapter_from_hal(hal_adapter) };
         Adapter { context, id }
     }
 
@@ -1858,7 +1858,7 @@ impl Instance {
         &self,
         layer: *mut std::ffi::c_void,
     ) -> Surface {
-        self.context.create_surface_from_core_animation_layer(layer)
+        unsafe { self.context.create_surface_from_core_animation_layer(layer) }
     }
 
     /// Creates a surface from `IDCompositionVisual`.
@@ -1868,7 +1868,7 @@ impl Instance {
     /// - visual must be a valid IDCompositionVisual to create a surface upon.
     #[cfg(target_os = "windows")]
     pub unsafe fn create_surface_from_visual(&self, visual: *mut std::ffi::c_void) -> Surface {
-        self.context.create_surface_from_visual(visual)
+        unsafe { self.context.create_surface_from_visual(visual) }
     }
 
     /// Creates a surface from a `web_sys::HtmlCanvasElement`.
@@ -1981,20 +1981,22 @@ impl Adapter {
         trace_path: Option<&std::path::Path>,
     ) -> Result<(Device, Queue), RequestDeviceError> {
         let context = Arc::clone(&self.context);
-        self.context
-            .create_device_from_hal(&self.id, hal_device, desc, trace_path)
-            .map(|(device_id, queue_id)| {
-                (
-                    Device {
-                        context: Arc::clone(&context),
-                        id: device_id,
-                    },
-                    Queue {
-                        context,
-                        id: queue_id,
-                    },
-                )
-            })
+        unsafe {
+            self.context
+                .create_device_from_hal(&self.id, hal_device, desc, trace_path)
+        }
+        .map(|(device_id, queue_id)| {
+            (
+                Device {
+                    context: Arc::clone(&context),
+                    id: device_id,
+                },
+                Queue {
+                    context,
+                    id: queue_id,
+                },
+            )
+        })
     }
 
     /// Apply a callback to this `Adapter`'s underlying backend adapter.
@@ -2021,8 +2023,10 @@ impl Adapter {
         &self,
         hal_adapter_callback: F,
     ) -> R {
-        self.context
-            .adapter_as_hal::<A, F, R>(self.id, hal_adapter_callback)
+        unsafe {
+            self.context
+                .adapter_as_hal::<A, F, R>(self.id, hal_adapter_callback)
+        }
     }
 
     /// Returns whether this adapter may present to the passed surface.
@@ -2122,12 +2126,14 @@ impl Device {
     ) -> ShaderModule {
         ShaderModule {
             context: Arc::clone(&self.context),
-            id: Context::device_create_shader_module(
-                &*self.context,
-                &self.id,
-                desc,
-                wgt::ShaderBoundChecks::unchecked(),
-            ),
+            id: unsafe {
+                Context::device_create_shader_module(
+                    &*self.context,
+                    &self.id,
+                    desc,
+                    wgt::ShaderBoundChecks::unchecked(),
+                )
+            },
         }
     }
 
@@ -2145,7 +2151,9 @@ impl Device {
     ) -> ShaderModule {
         ShaderModule {
             context: Arc::clone(&self.context),
-            id: Context::device_create_shader_module_spirv(&*self.context, &self.id, desc),
+            id: unsafe {
+                Context::device_create_shader_module_spirv(&*self.context, &self.id, desc)
+            },
         }
     }
 
@@ -2255,9 +2263,10 @@ impl Device {
     ) -> Texture {
         Texture {
             context: Arc::clone(&self.context),
-            id: self
-                .context
-                .create_texture_from_hal::<A>(hal_texture, &self.id, desc),
+            id: unsafe {
+                self.context
+                    .create_texture_from_hal::<A>(hal_texture, &self.id, desc)
+            },
             owned: true,
         }
     }
@@ -2333,8 +2342,10 @@ impl Device {
         &self,
         hal_device_callback: F,
     ) -> R {
-        self.context
-            .device_as_hal::<A, F, R>(&self.id, hal_device_callback)
+        unsafe {
+            self.context
+                .device_as_hal::<A, F, R>(&self.id, hal_device_callback)
+        }
     }
 }
 
@@ -2644,8 +2655,10 @@ impl Texture {
         &self,
         hal_texture_callback: F,
     ) {
-        self.context
-            .texture_as_hal::<A, F>(&self.id, hal_texture_callback)
+        unsafe {
+            self.context
+                .texture_as_hal::<A, F>(&self.id, hal_texture_callback)
+        }
     }
 
     /// Creates a view of this texture.
@@ -3802,8 +3815,10 @@ impl Surface {
         &mut self,
         hal_surface_callback: F,
     ) -> R {
-        self.context
-            .surface_as_hal_mut::<A, F, R>(&self.id, hal_surface_callback)
+        unsafe {
+            self.context
+                .surface_as_hal_mut::<A, F, R>(&self.id, hal_surface_callback)
+        }
     }
 }
 
@@ -3812,7 +3827,7 @@ impl Surface {
 #[cfg_attr(docsrs, doc(cfg(feature = "expose-ids")))]
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Id(BackendId);
+pub struct Id(u64);
 
 #[cfg(feature = "expose-ids")]
 impl Adapter {

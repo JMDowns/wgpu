@@ -91,6 +91,7 @@ impl crate::Adapter<Api> for Context {
     ) -> crate::TextureFormatCapabilities {
         crate::TextureFormatCapabilities::empty()
     }
+
     unsafe fn surface_capabilities(&self, surface: &Context) -> Option<crate::SurfaceCapabilities> {
         None
     }
